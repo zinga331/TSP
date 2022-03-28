@@ -131,13 +131,13 @@ class TSPSolver:
         start_state = State(table, lower_bound, 1,
                             0)  # Hard-code the depth of the tree to be one, since this is the first
         # state.
-        start_state.route.append(cities[start_state.last])
+        start_state.route.append(start_state.last)
         for row in range(ncities):
             start_state.cost_table[row][0] = math.inf
         for destination in range(ncities):
             new_state = self.expand(start_state, start_state.last, destination)
             total_states += 1
-            new_state.route.append(cities[destination])
+            new_state.route.append(destination)
             if new_state.lower_bound < bssf.cost:
                 priority_queue.put(new_state)
                 max_states = max(max_states, len(priority_queue.queue))
@@ -151,14 +151,15 @@ class TSPSolver:
                 for destination in range(ncities):
                     new_state = self.expand(curr_state, curr_state.last, destination)
                     total_states += 1
-                    new_state.route.append(cities[destination])
+                    new_state.route.append(destination)
                     if new_state.lower_bound < bssf.cost:
                         if len(new_state.route) == ncities:
-                            closing_cost = new_state.route[-1].costTo(new_state.route[0])
+                            closing_cost = cities[new_state.route[-1]].costTo(cities[new_state.route[0]])
                             if closing_cost != math.inf:
-                                pending_solution = TSPSolution(new_state.route)
+                                new_route = self.make_route(new_state.route, cities)
+                                pending_solution = TSPSolution(new_route)
                                 if bssf.cost > pending_solution.cost:
-                                    bssf = TSPSolution(new_state.route)
+                                    bssf = pending_solution
                                     count += 1
                         else:
                             priority_queue.put(new_state)
@@ -171,6 +172,7 @@ class TSPSolver:
         end_time = time.time()
         # TSPSolution(solution_cities)
         results = {}
+        print(len(priority_queue.queue))
         results['cost'] = bssf.cost
         results['time'] = end_time - start_time
         results['count'] = count
@@ -194,6 +196,13 @@ class TSPSolver:
         table.last = node_column
         # update the cost matrix of the row and column that match the expansion to infinity.
         return table
+
+    # Previous iterations of my program had each state hold onto a list of city object. Holding the indices sped things up a bunch.
+    def make_route(self, city_indices, all_cities):
+        route = []
+        for i in range(len(city_indices)):
+            route.append(all_cities[city_indices[i]])
+        return route
 
     def compute_minimum_matrix(self):
         cities = self._scenario.getCities()
