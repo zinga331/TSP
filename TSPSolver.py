@@ -243,7 +243,6 @@ class TSPSolver:
             route.append(all_cities[city_indices[i]])
         return route
 
-
     ''' <summary>
 		This is the entry point for the algorithm you'll write for your group project.
 		</summary>
@@ -253,8 +252,42 @@ class TSPSolver:
 		algorithm</returns>
 	'''
 
-    def fancy(self, time_allowance=60.0):
+    def fancy(self, time_allowance=60.0):  # i.e. 2opt
+        initial = self.defaultRandomTour(time_allowance)['soln']
+        # get the costs from each city to each other city and store as a matrix.
+        cities = self._scenario.getCities()
+        ncities = len(cities)
+        min_table = np.zeros((ncities, ncities))
+        # nested loop of size n running n times.
+        for i in range(ncities):
+            for j in range(ncities):
+                min_table[i, j] = cities[i].costTo(cities[j])
+        # For loop that loops through the current route, and tries to swap things.
+        for i in range(1, ncities - 2):
+            for j in range(1 + 1, ncities - 1):
+
+    def two_opt_swap(self):
         pass
+
+    # repeat
+    # until
+    # no
+    # improvement is made
+    # {
+    #     best_distance = calculateTotalDistance(existing_route)
+    # start_again:
+    # for (i = 0; i <= number of nodes eligible to be swapped - 1; i++) {
+        # for (k = i + 1; k <= number of nodes eligible to be swapped; k++) {
+            # new_route = 2optSwap(existing_route, i, k)
+            # new_distance = calculateTotalDistance(new_route)
+            # if (new_distance < best_distance) {
+                # existing_route = new_route
+                # best_distance = new_distance
+                # goto start_again
+                #           }
+            #       }
+        #   }
+    # }
 
 
 class State:
