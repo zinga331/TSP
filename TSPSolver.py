@@ -121,19 +121,24 @@ class TSPSolver:
         priority_queue = queue.PriorityQueue()
         cities = self._scenario.getCities()
         ncities = len(cities)
-        count = 0
+        count = 0  # count represents the total number of solutions found. If count ends as 0, only a greedy solution
+        # was found.
         max_states = 1
         total_states = 1  # counting for the start state.
         pruned_states = 0
 
-        bssf = self.greedy(time_allowance / 100)['soln']
+        # Operating under the assumption that most trials will be given 60 seconds, I don't want to spend more than 2
+        # seconds to get an initial BSSF from the greed algorithm.
+        bssf = self.greedy(time_allowance / 30)['soln']
         table, lower_bound = self.compute_minimum_matrix()
-        start_state = State(table, lower_bound, 1,
-                            0)  # Hard-code the depth of the tree to be one, since this is the first
-        # state.
+        start_state = State(table, lower_bound, 1, 0)  # Hard-code the depth of the tree to be one, since this is the
+        # first state.
         start_state.route.append(start_state.last)
+        # A valid cycle for TSP won't include an edge going to the first city until a solution, blanking out the
+        # first column.
         for row in range(ncities):
             start_state.cost_table[row][0] = math.inf
+        # Expand the first state into new states including an edge from city 0 to other cities.
         for destination in range(ncities):
             new_state = self.expand(start_state, start_state.last, destination)
             total_states += 1
@@ -143,14 +148,14 @@ class TSPSolver:
                 max_states = max(max_states, len(priority_queue.queue))
             else:
                 pruned_states += 1
-        # Todo Expand the substates properly, making sure not to expand something already expanded.
+
         # Enter the while loop that works the problem until the queue is empty.
         while len(priority_queue.queue) > 0 and time.time() - start_time < time_allowance:
             curr_state = priority_queue.get()
             if curr_state.lower_bound < bssf.cost:
                 for destination in range(ncities):
                     new_state = self.expand(curr_state, curr_state.last, destination)
-                    total_states += 1
+                    total_states += 1  # Add to total states, even if it is pruned shortly after.
                     new_state.route.append(destination)
                     if new_state.lower_bound < bssf.cost:
                         if len(new_state.route) == ncities:
@@ -163,15 +168,16 @@ class TSPSolver:
                                     count += 1
                         else:
                             priority_queue.put(new_state)
-                    else:
+                    else:  # if the cost isn't better than bssf, prune it.
                         pruned_states += 1
             else:
-                pruned_states += 1
+                pruned_states += 1  # if the state no longer belongs on the queue, prune it.
             max_states = max(max_states, len(priority_queue.queue))
+        # if time in the while loop runs out, count the remaining states as pruned.
         pruned_states += len(priority_queue.queue)
         end_time = time.time()
         # TSPSolution(solution_cities)
-        results = {}
+        results = {}  # create a new results object.
         print(len(priority_queue.queue))
         results['cost'] = bssf.cost
         results['time'] = end_time - start_time
@@ -182,6 +188,38 @@ class TSPSolver:
         results['pruned'] = pruned_states
         return results
 
+    # Given the cost between each cities, create the minimum matrix.
+    def compute_minimum_matrix(self):  # Time O(n^2), Space O(n^2)
+        # The cost between each city is calculated in both directions, to give an n by n matrix
+        cities = self._scenario.getCities()
+        ncities = len(cities)
+        min_table = np.zeros((ncities, ncities))  # Create ncities by ncities matrix to hold the cost values.
+        # nested loop of size n running n times.
+        for i in range(ncities):
+            for j in range(ncities):
+                min_table[i, j] = cities[i].costTo(cities[j])
+        # add all the costs for city i to a matrix.
+        lower_bound = self.reduce_matrix(min_table)
+
+        return min_table, lower_bound
+
+    # min_cost doesn't include the lower bound so far, just the cost to minimize the matrix.
+    def reduce_matrix(self, min_table):  # O(n^2)
+        min_cost = 0
+        # reduce each row, finding the min and subtracting the min from each row.
+        for row in range(min_table.shape[0]):  # n^2 checks at constant time.
+            min_of_row = numpy.amin(min_table[[row], :])
+            if min_of_row != math.inf:
+                min_table[row] -= min_of_row
+                min_cost += min_of_row
+        for column in range(min_table.shape[1]):  # n^2 checks at constant time.
+            min_of_column = numpy.amin(min_table[:, column])
+            if min_of_column != math.inf:
+                min_table[:, column] -= min_of_column
+                min_cost += min_of_column
+        return min_cost
+
+    # including the edge from city node_row to city node column, and then reduce the matrix.
     def expand(self, curr_state, node_row, node_column):
         if curr_state.cost_table[node_row][node_column] == math.inf:
             return State(curr_state.cost_table, math.inf, 1, 1)
@@ -197,42 +235,14 @@ class TSPSolver:
         # update the cost matrix of the row and column that match the expansion to infinity.
         return table
 
-    # Previous iterations of my program had each state hold onto a list of city object. Holding the indices sped things up a bunch.
+    # Previous iterations of my program had each state hold onto a list of city object. Holding the indices sped
+    # things up a bunch.
     def make_route(self, city_indices, all_cities):
         route = []
         for i in range(len(city_indices)):
             route.append(all_cities[city_indices[i]])
         return route
 
-    def compute_minimum_matrix(self):
-        cities = self._scenario.getCities()
-        ncities = len(cities)
-        # use a numpy array instead of an nd array. That'll
-        min_table = np.zeros((ncities, ncities))
-        for i in range(ncities):
-            for j in range(ncities):
-                min_table[i, j] = cities[i].costTo(cities[j])
-        # add all the costs for city i to a matrix.
-        lower_bound = self.reduce_matrix(min_table)
-
-        return min_table, lower_bound
-
-    def reduce_matrix(self, min_table):
-        min_cost = 0
-        for row in range(min_table.shape[0]):
-            min_of_row = numpy.amin(min_table[[row], :])
-            if min_of_row != math.inf:
-                min_table[row] -= min_of_row
-                min_cost += min_of_row
-        for column in range(min_table.shape[1]):
-            min_of_column = numpy.amin(min_table[:, column])
-            if min_of_column != math.inf:
-                min_table[:, column] -= min_of_column
-                min_cost += min_of_column
-        return min_cost
-
-    # consider creating a TSP class node, getPriority, and set the lambda as node.getPriority.
-    # keep track of your current cost matrix within this node as well.
 
     ''' <summary>
 		This is the entry point for the algorithm you'll write for your group project.
@@ -254,28 +264,20 @@ class State:
         self.lower_bound = lower_bound
         self.depth = depth
         self.last = last
-        self.ncities = len(cost_table[0])
 
+    # Overriding the less than function to give the state with the lowest priority value precedence.
     def __lt__(self, other):  # return true if other's priority is less than self's.
         priority_self = self.get_priority()
         priority_other = other.get_priority()
-        if priority_other > priority_self:  # Todo see if this backwards understanding helps.
+        if priority_other > priority_self:
             return True
         else:
             return False
 
     # Adjusting this function allows modifies which state it expands first, hopefully to calculate new solutions and
-    # allow other states to be pruned sooner.
-    def get_priority(self):
-        percentage = self.depth / self.ncities
-        if percentage >= .35:
-            discount = self.depth = percentage / 5
-            priority = self.lower_bound - (self.lower_bound * discount)
-        else:
-            priority = self.lower_bound
+    # allow other states to be pruned sooner. I tried a number of different ways to determine priority,
+    # and found that while depth should be considered, it should be limited so that if an expanded state has a cost
+    # much worse than its parent, it won't have priority.
+    def get_priority(self):  # Priority can be calculated at constant time.
+        priority = self.lower_bound / (self.depth ** .8)
         return priority
-    # if len(self.route) < (self.ncities - (self.ncities / 10)):
-    #     priority = self.lower_bound / (reduce * .5)
-    # else:
-    #     priority = self.lower_bound / (reduce * .1)
-    # return priority

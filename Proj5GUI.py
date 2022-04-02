@@ -399,9 +399,9 @@ class Proj5GUI( QMainWindow ):
 		self.generateButton = QPushButton('Generate Scenario')
 		self.solveButton	= QPushButton('Solve TSP')
 
-		self.curSeed		= QLineEdit('1')
+		self.curSeed		= QLineEdit('20')
 		self.curSeed.setFixedWidth(100)
-		self.size			= QLineEdit('14')
+		self.size			= QLineEdit('15')
 		self.size.setFixedWidth(50)
 		self.timeLimit		= QLineEdit('60')
 		self.timeLimit.setFixedWidth(50)
