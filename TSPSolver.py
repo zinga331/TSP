@@ -253,21 +253,54 @@ class TSPSolver:
 	'''
 
     def fancy(self, time_allowance=60.0):  # i.e. 2opt
-        initial = self.defaultRandomTour(time_allowance)['soln']
+        startTime = time.time()
+        bestSoFar = self.defaultRandomTour(time_allowance)['soln']
+        count = 0
         # get the costs from each city to each other city and store as a matrix.
         cities = self._scenario.getCities()
         ncities = len(cities)
+        swapped = self.two_opt_swap(bestSoFar.route, 0, ncities-1)
         min_table = np.zeros((ncities, ncities))
         # nested loop of size n running n times.
         for i in range(ncities):
             for j in range(ncities):
                 min_table[i, j] = cities[i].costTo(cities[j])
-        # For loop that loops through the current route, and tries to swap things.
-        for i in range(1, ncities - 2):
-            for j in range(1 + 1, ncities - 1):
 
-    def two_opt_swap(self):
-        pass
+        keep_going = True
+        while keep_going and time.time() - startTime < time_allowance:
+            keep_going = False
+            # For loop that loops through the current route, and tries to swap things.
+            for i in range(1, ncities - 2):
+                for j in range(i + 1, ncities - 1):
+                    new_route = self.two_opt_swap(bestSoFar.route, i, j)
+                    new_solution = TSPSolution(new_route)
+                    if new_solution.cost < bestSoFar.cost:
+                        bestSoFar = new_solution
+                        keep_going = True
+                        count += 1
+                        break
+                if keep_going:
+                    break
+        endTime = time.time()
+        results = {}  # create a new results object.
+        results['cost'] = bestSoFar.cost
+        results['time'] = endTime - startTime
+        results['count'] = count
+        results['soln'] = bestSoFar
+        results['max'] = None
+        results['total'] = None
+        results['pruned'] = None
+        return results
+
+    def two_opt_swap(self, initial_route, start, end):
+        swapped_route = []
+        for i in range(0, start):
+            swapped_route.append(initial_route[i])
+        for i in range(end, start - 1, -1):
+            swapped_route.append(initial_route[i])
+        for i in range(end + 1, len(initial_route)):
+            swapped_route.append(initial_route[i])
+        return swapped_route
 
     # repeat
     # until
