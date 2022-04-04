@@ -272,21 +272,15 @@ class TSPSolver:
         startTime = time.time()
         solutions = []
         num_mutations = 0  # Curios to see how often our algorithm mutates.
+        count = 0
         for tests in range(5):
             bestSoFar = self.greedy(time_allowance)['soln']
             best_of_all = bestSoFar.cost
-            print("Not stuck.")
-            count = 0
+            # print("Not stuck.")
+
             # get the costs from each city to each other city and store as a matrix.
             cities = self._scenario.getCities()
             ncities = len(cities)
-
-            # swapped = self.two_opt_swap(bestSoFar.route, 2, 4)
-            # min_table = np.zeros((ncities, ncities))
-            # # nested loop of size n running n times.
-            # for i in range(ncities):  # are we using this?
-            #     for j in range(ncities):
-            #         min_table[i, j] = cities[i].costTo(cities[j])
 
             keep_going = True
             while keep_going and time.time() - startTime < time_allowance:
