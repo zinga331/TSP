@@ -79,10 +79,25 @@ class TSPSolver:
         count = 0
         bssf = None
         start_time = time.time()
+        num_cities_checked = 0
+        city_starts = []
 
-        while not foundTour and time.time() - start_time < time_allowance:
+        while not foundTour and time.time() - start_time < time_allowance and len(city_starts) < ncities:
+            for city in range(ncities):
+                cities[city].visited = False
             route = []
-            curr_city_index = np.random.randint(0, ncities)
+            found_city = False
+            while not found_city and len(city_starts) < ncities:
+                num_cities_checked += 1
+                rand_city = np.random.randint(0, ncities)
+                if not city_starts.count(rand_city):
+                    city_starts.append(rand_city)
+                    curr_city_index = rand_city
+                    found_city = True
+            if len(city_starts) == ncities:
+                break
+
+            # curr_city_index = city_index
             # Add the starting city to the route, and show that we HAVE visited it.
             route.append(cities[curr_city_index])
             for num_visited in range(ncities):
@@ -256,8 +271,11 @@ class TSPSolver:
     def fancy(self, time_allowance=60.0):  # i.e. 2opt
         startTime = time.time()
         solutions = []
-        for tests in range(100):
-            bestSoFar = self.defaultRandomTour(time_allowance)['soln']
+        num_mutations = 0  # Curios to see how often our algorithm mutates.
+        for tests in range(5):
+            bestSoFar = self.greedy(time_allowance)['soln']
+            best_of_all = bestSoFar.cost
+            print("Not stuck.")
             count = 0
             # get the costs from each city to each other city and store as a matrix.
             cities = self._scenario.getCities()
@@ -273,24 +291,35 @@ class TSPSolver:
             keep_going = True
             while keep_going and time.time() - startTime < time_allowance:
                 keep_going = False
+                print(count)
                 # For loop that loops through the current route, and tries to swap things.
                 for i in range(0, ncities - 1):  # Is this going to make a difference?
+                    if i == 0:
+                        print("We're starting over")
                     for j in range(i + 1, ncities):
                         new_route = self.two_opt_swap(bestSoFar.route, i, j)
                         new_solution = TSPSolution(new_route)
                         fitness = random.uniform(0, 100)
+                        if fitness > 97:
+                            num_mutations += 1
                         if new_solution.cost != math.inf:
-                            if (new_solution.cost < bestSoFar.cost and fitness <= 99) or (new_solution.cost > bestSoFar.cost and fitness > 99):
+                            # if new_solution.cost < bestSoFar.cost:
+                            if (new_solution.cost < bestSoFar.cost and fitness <= 97) or (
+                                    new_solution.cost > bestSoFar.cost and fitness > 97):
+                                print(count)
+                                if new_solution.cost < best_of_all:
+                                    count = count + 1
+                                    best_of_all = new_solution.cost
                                 bestSoFar = new_solution
                                 keep_going = True
-                                count = count + 1
+
                                 break
                     if keep_going:
                         break
-            if time.time() - startTime < time_allowance:
-                solutions.append(bestSoFar)
-            else:
+            solutions.append(bestSoFar)
+            if time.time() - startTime > time_allowance:
                 break
+            print("one of the iterations finished.")
         get_sol = bestSoFar
         for solution in solutions:
             if get_sol.cost > solution.cost:
@@ -301,7 +330,7 @@ class TSPSolver:
         results['time'] = endTime - startTime
         results['count'] = count
         results['soln'] = get_sol
-        results['max'] = None
+        results['max'] = num_mutations  # keep track of mutations.
         results['total'] = None
         results['pruned'] = None
         return results
