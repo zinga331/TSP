@@ -3,6 +3,7 @@ import copy
 import math
 import queue
 import numpy
+import random
 
 from which_pyqt import PYQT_VER
 
@@ -277,11 +278,13 @@ class TSPSolver:
                     for j in range(i + 1, ncities):
                         new_route = self.two_opt_swap(bestSoFar.route, i, j)
                         new_solution = TSPSolution(new_route)
-                        if new_solution.cost < bestSoFar.cost:
-                            bestSoFar = new_solution
-                            keep_going = True
-                            count = count + 1
-                            break
+                        fitness = random.uniform(0, 100)
+                        if new_solution.cost != math.inf:
+                            if (new_solution.cost < bestSoFar.cost and fitness <= 99) or (new_solution.cost > bestSoFar.cost and fitness > 99):
+                                bestSoFar = new_solution
+                                keep_going = True
+                                count = count + 1
+                                break
                     if keep_going:
                         break
             if time.time() - startTime < time_allowance:
