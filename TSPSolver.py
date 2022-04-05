@@ -281,6 +281,7 @@ class TSPSolver:
         num_tests = int(max(200/ncities, 2))  # Haven't decided on the number of test we should do.
         tests_began = 0
         for tests in range(100):
+            count_at_beginning = count
             tests_began += 1
             bestSoFar = self.greedy(time_allowance)['soln']
             greedy_solutions.append(bestSoFar)
@@ -290,7 +291,7 @@ class TSPSolver:
 
             keep_going = True
             while keep_going and time.time() - startTime < time_allowance:
-                count_at_beginning = count
+
                 keep_going = False
                 # For loop that loops through the current route, and tries to swap things.
                 for i in range(0, ncities - 1):  # Is this going to make a difference?
@@ -316,7 +317,7 @@ class TSPSolver:
                     num_trials_without_update += 1
                 if count_at_beginning != count:
                     num_trials_without_update = 0
-            if num_trials_without_update >= 100:
+            if num_trials_without_update > 5:
                 print("coulda ended ages ago.")
                 break
                 # if solutions[len(solutions)-1].cost == solutions[len(solutions) - 1]:
