@@ -271,35 +271,36 @@ class TSPSolver:
     def fancy(self, time_allowance=60.0):  # i.e. 2opt
         startTime = time.time()
         solutions = []
-        num_mutations = 0  # Curios to see how often our algorithm mutates.
         count = 0
-        for tests in range(5):
+        # get the costs from each city to each other city and store as a matrix.
+        cities = self._scenario.getCities()
+        ncities = len(cities)
+        best_of_all = math.inf
+        greedy_solutions = []
+        num_tests = int(max(200/ncities, 2))  # Haven't decided on the number of test we should do.
+        tests_began = 0
+        for tests in range(1000):
+            tests_began += 1
             bestSoFar = self.greedy(time_allowance)['soln']
-            best_of_all = bestSoFar.cost
-            # print("Not stuck.")
-
-            # get the costs from each city to each other city and store as a matrix.
-            cities = self._scenario.getCities()
-            ncities = len(cities)
+            greedy_solutions.append(bestSoFar)
+            if best_of_all > bestSoFar.cost:
+                best_of_all = bestSoFar.cost
 
             keep_going = True
             while keep_going and time.time() - startTime < time_allowance:
                 keep_going = False
-                print(count)
                 # For loop that loops through the current route, and tries to swap things.
                 for i in range(0, ncities - 1):  # Is this going to make a difference?
-                    if i == 0:
-                        print("We're starting over")
                     for j in range(i + 1, ncities):
                         new_route = self.two_opt_swap(bestSoFar.route, i, j)
                         new_solution = TSPSolution(new_route)
-                        fitness = random.uniform(0, 100)
-                        if fitness > 97:
-                            num_mutations += 1
+                        # fitness = random.uniform(0, 100)
+                        # if fitness > 97:
+                        #     num_mutations += 1
                         if new_solution.cost != math.inf:
-                            # if new_solution.cost < bestSoFar.cost:
-                            if (new_solution.cost < bestSoFar.cost and fitness <= 97) or (
-                                    new_solution.cost > bestSoFar.cost and fitness > 97):
+                            # if (new_solution.cost < bestSoFar.cost and fitness <= 97) or (
+                            #         new_solution.cost > bestSoFar.cost and fitness > 97):
+                            if new_solution.cost < bestSoFar.cost:
                                 print(count)
                                 if new_solution.cost < best_of_all:
                                     count = count + 1
@@ -324,8 +325,8 @@ class TSPSolver:
         results['time'] = endTime - startTime
         results['count'] = count
         results['soln'] = get_sol
-        results['max'] = num_mutations  # keep track of mutations.
-        results['total'] = None
+        results['max'] = None
+        results['total'] = tests_began # how many of our tests were actually completed in time.
         results['pruned'] = None
         return results
 
@@ -339,25 +340,6 @@ class TSPSolver:
             swapped_route.append(initial_route[i])
         return swapped_route
 
-    # repeat
-    # until
-    # no
-    # improvement is made
-    # {
-    #     best_distance = calculateTotalDistance(existing_route)
-    # start_again:
-    # for (i = 0; i <= number of nodes eligible to be swapped - 1; i++) {
-        # for (k = i + 1; k <= number of nodes eligible to be swapped; k++) {
-            # new_route = 2optSwap(existing_route, i, k)
-            # new_distance = calculateTotalDistance(new_route)
-            # if (new_distance < best_distance) {
-                # existing_route = new_route
-                # best_distance = new_distance
-                # goto start_again
-                #           }
-            #       }
-        #   }
-    # }
 
 
 class State:
