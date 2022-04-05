@@ -279,7 +279,7 @@ class TSPSolver:
         greedy_solutions = []
         num_tests = int(max(200/ncities, 2))  # Haven't decided on the number of test we should do.
         tests_began = 0
-        for tests in range(1000):
+        for tests in range(100):
             tests_began += 1
             bestSoFar = self.greedy(time_allowance)['soln']
             greedy_solutions.append(bestSoFar)
@@ -326,7 +326,73 @@ class TSPSolver:
         results['count'] = count
         results['soln'] = get_sol
         results['max'] = None
-        results['total'] = tests_began # how many of our tests were actually completed in time.
+        results['total'] = tests_began  # how many of our tests were actually completed in time.
+        results['pruned'] = None
+        return results
+
+    def fastRandomTour(self, time_allowance=60.0):
+        results = {}
+        cities = self._scenario.getCities()
+        ncities = len(cities)
+        foundTour = False
+        count = 0
+        bssf = None
+        start_time = time.time()
+        num_cities_checked = 0
+        city_starts = []
+
+        while not foundTour and time.time() - start_time < time_allowance and len(city_starts) < ncities:
+            for city in range(ncities):
+                cities[city].visited = False
+            route = []
+            found_city = False
+            while not found_city and len(city_starts) < ncities:
+                num_cities_checked += 1
+                rand_city = np.random.randint(0, ncities)
+                if not city_starts.count(rand_city):
+                    city_starts.append(rand_city)
+                    curr_city_index = rand_city
+                    found_city = True
+            if len(city_starts) == ncities:
+                break
+
+            # curr_city_index = city_index
+            # Add the starting city to the route, and show that we HAVE visited it.
+            route.append(cities[curr_city_index])
+            for num_visited in range(ncities):
+                cities[curr_city_index].visited = True  # We will visit this city, set it to visited.
+                for available_edges in range(ncities):
+                    city_edges = []
+                    i = None
+                    found_edge = False
+                    while not found_edge and len(city_edges) < ncities:
+                        num_cities_checked += 1
+                        i = np.random.randint(0, ncities)
+                        if not city_edges.count(i):
+                            city_edges.append(i)
+                            curr_city_index = i
+                            found_edge = True
+                    new_dist = cities[curr_city_index].costTo(cities[i])
+                    if not cities[i].visited and new_dist < np.inf:
+                        curr_city_index = i
+                        break
+
+                if curr_city_index is not None:
+                    route.append(cities[curr_city_index])
+            bssf = TSPSolution(route)
+            if len(route) < len(cities):
+                bssf.cost = math.inf
+            count += 1
+            if bssf.cost < np.inf:
+                # Found a valid route
+                foundTour = True
+        end_time = time.time()
+        results['cost'] = bssf.cost if foundTour else math.inf
+        results['time'] = end_time - start_time
+        results['count'] = count
+        results['soln'] = bssf
+        results['max'] = None
+        results['total'] = None
         results['pruned'] = None
         return results
 
