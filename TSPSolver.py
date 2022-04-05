@@ -272,6 +272,7 @@ class TSPSolver:
         startTime = time.time()
         solutions = []
         count = 0
+        num_trials_without_update = 0
         # get the costs from each city to each other city and store as a matrix.
         cities = self._scenario.getCities()
         ncities = len(cities)
@@ -285,36 +286,46 @@ class TSPSolver:
             greedy_solutions.append(bestSoFar)
             if best_of_all > bestSoFar.cost:
                 best_of_all = bestSoFar.cost
+                count +=1
 
             keep_going = True
             while keep_going and time.time() - startTime < time_allowance:
+                count_at_beginning = count
                 keep_going = False
                 # For loop that loops through the current route, and tries to swap things.
                 for i in range(0, ncities - 1):  # Is this going to make a difference?
                     for j in range(i + 1, ncities):
                         new_route = self.two_opt_swap(bestSoFar.route, i, j)
                         new_solution = TSPSolution(new_route)
-                        # fitness = random.uniform(0, 100)
-                        # if fitness > 97:
-                        #     num_mutations += 1
                         if new_solution.cost != math.inf:
-                            # if (new_solution.cost < bestSoFar.cost and fitness <= 97) or (
-                            #         new_solution.cost > bestSoFar.cost and fitness > 97):
                             if new_solution.cost < bestSoFar.cost:
-                                print(count)
+                                # print(count)
                                 if new_solution.cost < best_of_all:
                                     count = count + 1
                                     best_of_all = new_solution.cost
                                 bestSoFar = new_solution
                                 keep_going = True
-
                                 break
                     if keep_going:
                         break
+            print("Best of run: ", bestSoFar.cost)
+            print("Very best run so far: ", best_of_all)
             solutions.append(bestSoFar)
+            if len(solutions) >= 2:
+                if count_at_beginning == count:
+                    num_trials_without_update += 1
+                if count_at_beginning != count:
+                    num_trials_without_update = 0
+            if num_trials_without_update >= 100:
+                print("coulda ended ages ago.")
+                break
+                # if solutions[len(solutions)-1].cost == solutions[len(solutions) - 1]:
+                #     break
+
             if time.time() - startTime > time_allowance:
                 break
-            print("one of the iterations finished.")
+            print("Finished test #", tests)
+            print("Count is ", count)
         get_sol = bestSoFar
         for solution in solutions:
             if get_sol.cost > solution.cost:
