@@ -71,7 +71,7 @@ class TSPSolver:
         results['pruned'] = None
         return results
 
-    def greedy(self, time_allowance=60.0):
+    def greedy(self, city_starts=[], time_allowance=60.0):
         results = {}
         cities = self._scenario.getCities()
         ncities = len(cities)
@@ -80,7 +80,7 @@ class TSPSolver:
         bssf = None
         start_time = time.time()
         num_cities_checked = 0
-        city_starts = []
+        # city_starts = []
 
         while not foundTour and time.time() - start_time < time_allowance and len(city_starts) < ncities:
             for city in range(ncities):
@@ -145,7 +145,8 @@ class TSPSolver:
 
         # Operating under the assumption that most trials will be given 60 seconds, I don't want to spend more than 2
         # seconds to get an initial BSSF from the greed algorithm.
-        bssf = self.greedy(time_allowance / 30)['soln']
+        blank = []
+        bssf = self.greedy(blank, time_allowance / 30)['soln']
         table, lower_bound = self.compute_minimum_matrix()
         start_state = State(table, lower_bound, 1, 0)  # Hard-code the depth of the tree to be one, since this is the
         # first state.
@@ -278,16 +279,20 @@ class TSPSolver:
         ncities = len(cities)
         best_of_all = math.inf
         greedy_solutions = []
-        num_tests = int(max(200/ncities, 2))  # Haven't decided on the number of test we should do.
         tests_began = 0
+        city_starts = []
         for tests in range(100):
+            if len(city_starts) == ncities:
+                break
             count_at_beginning = count
             tests_began += 1
-            bestSoFar = self.greedy(time_allowance)['soln']
+            bestSoFar = self.greedy(city_starts, time_allowance)['soln']
+            if bestSoFar is None or len(bestSoFar.route) < ncities:
+                break
             greedy_solutions.append(bestSoFar)
             if best_of_all > bestSoFar.cost:
                 best_of_all = bestSoFar.cost
-                count +=1
+                count += 1
 
             keep_going = True
             while keep_going and time.time() - startTime < time_allowance:
@@ -300,7 +305,7 @@ class TSPSolver:
                         new_solution = TSPSolution(new_route)
                         if new_solution.cost != math.inf:
                             if new_solution.cost < bestSoFar.cost:
-                                # print(count)
+                                print(count)
                                 if new_solution.cost < best_of_all:
                                     count = count + 1
                                     best_of_all = new_solution.cost
@@ -317,17 +322,15 @@ class TSPSolver:
                     num_trials_without_update += 1
                 if count_at_beginning != count:
                     num_trials_without_update = 0
-            if num_trials_without_update > 5:
+            if num_trials_without_update > 10:
                 print("coulda ended ages ago.")
                 break
-                # if solutions[len(solutions)-1].cost == solutions[len(solutions) - 1]:
-                #     break
 
             if time.time() - startTime > time_allowance:
                 break
-            print("Finished test #", tests)
+            print("Finished test #", tests +1)
             print("Count is ", count)
-        get_sol = bestSoFar
+        get_sol = solutions[0]
         for solution in solutions:
             if get_sol.cost > solution.cost:
                 get_sol = solution
@@ -372,23 +375,21 @@ class TSPSolver:
             # Add the starting city to the route, and show that we HAVE visited it.
             route.append(cities[curr_city_index])
             for num_visited in range(ncities):
+                new_index = None
+                min_edge = math.inf
                 cities[curr_city_index].visited = True  # We will visit this city, set it to visited.
-                for available_edges in range(ncities):
-                    city_edges = []
-                    i = None
-                    found_edge = False
-                    while not found_edge and len(city_edges) < ncities:
-                        num_cities_checked += 1
-                        i = np.random.randint(0, ncities)
-                        if not city_edges.count(i):
-                            city_edges.append(i)
-                            curr_city_index = i
-                            found_edge = True
+                random_order = [i for i in range(ncities)]
+                np.random.shuffle(random_order)
+                for i in random_order:
                     new_dist = cities[curr_city_index].costTo(cities[i])
                     if not cities[i].visited and new_dist < np.inf:
-                        curr_city_index = i
+                        min_edge = new_dist
+                        new_index = i
                         break
+                if min_edge == math.inf:
+                    break
 
+                curr_city_index = new_index
                 if curr_city_index is not None:
                     route.append(cities[curr_city_index])
             bssf = TSPSolution(route)
